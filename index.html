@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>С Днём Рождения! 🎉</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root{ --w:520px; --h:300px; --d:4800px; --tile:22px; }
+  body{ margin:0;height:100vh;overflow:hidden; background:#000; color:#fff; font-family:'Bebas Neue',sans-serif; }
+
+  /* ======= СТАРТОВЫЙ ЭКРАН ======= */
+  #startScreen{position:fixed; inset:0; display:grid; place-items:center; z-index:30;}
+  #startInner{ position:fixed; inset:0; display:grid; place-items:center; }
+
+  /* Прогресс-бар 40 нажатий */
+  #progressWrap{ position:absolute; top:14px; left:50%; transform:translateX(-50%); width:min(800px,90vw); }
+  #progressLabel{ font-size:16px; letter-spacing:.5px; text-align:center; margin-bottom:6px; color:#ddd }
+  #progress{ position:relative; height:16px; background:#171717; border:1px solid #ffffff22; border-radius:10px; overflow:hidden; box-shadow:inset 0 1px 2px #000a }
+  #progressFill{ position:absolute; left:0; top:0; bottom:0; width:0%; background:linear-gradient(90deg,#b30000,#ff3b3b); box-shadow:0 0 12px #ff3b3b66; transition:width .2s ease }
+  #progressCount{ position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px; color:#fff }
+
+  /* хаотичные кнопки */
+  .trollBtn{
+    position:absolute; padding:12px 16px; font-size:16px; letter-spacing:.6px; border:none; cursor:pointer; color:#fff;
+    background:#a00; box-shadow:0 4px 12px #0008, inset 0 -2px 0 #0005; border-radius:8px; transform:rotate(var(--rot));
+    min-width: 290px; max-width: 420px; text-align:center;
+  }
+  .trollBtn:active{ transform:rotate(var(--rot)) translateY(1px) }
+
+  /* слой падений (картинки) */
+#fallLayer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999; /* теперь слой самый верхний */
+}
+
+  .faller-img{
+    position:absolute; top:-140px;
+    object-fit:contain; object-position:center;
+    box-shadow:0 10px 28px #000a; border-radius:10px;
+    will-change: transform, opacity;
+    animation: fallDown var(--fallDur,s) linear forwards;
+    transform:rotate(var(--spin));
+  }
+  @keyframes fallDown{ to{ transform:translateY(110vh) rotate(var(--spin)); opacity:.98 } }
+
+  /* Чёрный оверлей для 40/40 */
+  #blockOverlay{ position:fixed; inset:0; background:#000; color:#fff; display:grid; place-items:center; z-index:60; opacity:0; pointer-events:none; transition:opacity .35s ease }
+  #blockOverlay.show{ opacity:1; pointer-events:auto }
+  #blockOverlay h2{ font-size:clamp(28px,6vw,64px); letter-spacing:1px }
+
+  /* ======= ДВЕРЬ ======= */
+  .door-btn{ position:relative; width:280px; height:380px; border:5px solid #3b1a09; border-radius:8px; cursor:pointer; perspective:1200px;
+             box-shadow:0 20px 35px #0009, inset 0 0 25px #000a; background:#2e1508; transition:transform .25s ease; z-index:10; }
+  .door-frame{position:absolute;inset:0;border-radius:8px;overflow:hidden;background:linear-gradient(145deg,#3a1a09,#2a1208);box-shadow:inset 0 0 10px #000a;}
+  .door{position:absolute;left:0;top:0;width:100%;height:100%;background:repeating-linear-gradient(90deg,#5a2b13 0 10px,#4a220f 10px 20px,#3b190b 20px 30px);transform-origin:left center;transition:transform 1.0s cubic-bezier(.55,.25,.1,1);border-right:6px solid #1a0a04;box-shadow:inset 0 0 25px #000a,0 0 10px #0007;}
+  .handle{position:absolute;top:50%;right:24px;width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffd700 0%,#c5a100 70%,#7a5d00 100%);box-shadow:0 0 10px #0008,inset -3px -3px 4px #0005,inset 2px 2px 3px #fff3;transform:translateY(-50%);}  
+  .hinge{position:absolute;left:-6px;width:6px;height:32px;background:linear-gradient(180deg,#2c2c2c,#1a1a1a);border-radius:2px;box-shadow:inset 0 0 3px #0007;}
+  .hinge.top{top:40px}.hinge.mid{top:calc(50% - 16px)}.hinge.bottom{bottom:40px}
+  .door-btn:hover .door{ transform:rotateY(-38deg) }
+  .door-text{position:absolute;bottom:-60px;left:0;width:100%;text-align:center;font-size:34px;letter-spacing:1.2px;z-index:2;color:#f5e9d3;text-shadow:0 2px 6px #000;}
+  .glow{position:absolute;inset:-10%;background:radial-gradient(circle at center,rgba(255,180,80,0.15) 0%,transparent 80%);opacity:0;transition:opacity .6s ease;pointer-events:none;z-index:1;}
+  .door-btn:hover .glow{opacity:.9;filter:blur(8px);}  
+
+  /* ======= КОРИДОР ======= */
+  .corridor{ position:fixed;inset:0; display:none; place-items:center; perspective:1600px; background:#000; z-index:20; }
+  .corridor.show{ display:grid; }
+  .scene{ position:relative; width:1px; height:1px; transform-style:preserve-3d; }
+
+  .grid{ background:
+       linear-gradient(180deg, #0f0f10 0%, #0a0a0b 100%),
+       repeating-linear-gradient(0deg, #151515 0 var(--tile), #0f0f10 var(--tile) calc(var(--tile)*2)),
+       repeating-linear-gradient(90deg, #151515 0 var(--tile), #0f0f10 var(--tile) calc(var(--tile)*2));
+         box-shadow: inset 0 0 120px #000; }
+  .left.wall{ width:var(--d); height:var(--h); transform: translateX(calc(-1*var(--w))) translateZ(calc(-1*var(--d)/2)) rotateY(90deg); }
+  .right.wall{ width:var(--d); height:var(--h); transform: translateX(var(--w)) translateZ(calc(-1*var(--d)/2)) rotateY(-90deg); }
+  .floor{ width:var(--d); height:calc(var(--w)); transform: translateY(calc(var(--h)/2)) translateZ(calc(-1*var(--d)/2)) rotateX(90deg);
+          background: linear-gradient(#060606 0, #0a0a0a 40%, #060606 100%), repeating-linear-gradient(90deg, #121212 0 var(--tile), #0b0b0b var(--tile) calc(var(--tile)*2));
+          box-shadow: inset 0 0 160px #000; }
+  .ceiling{ width:var(--d); height:calc(var(--w)); transform: translateY(calc(-1*var(--h)/2)) translateZ(calc(-1*var(--d)/2)) rotateX(-90deg);
+            background: linear-gradient(#0a0a0a, #070707), repeating-linear-gradient(90deg, #141414 0 var(--tile), #0e0e0e var(--tile) calc(var(--tile)*2));
+            box-shadow: inset 0 0 160px #000; }
+
+  /* Слайды */
+  .panel{ position:absolute; left:50%; top:50%; width:520px; height:260px; background:#0008; color:#fff; display:grid; place-items:center;
+          border:1px solid #ffffff26; border-radius:16px; box-shadow:0 20px 60px #0009, inset 0 1px 0 #ffffff20; transform-style:preserve-3d; opacity:0; transform: translate(-50%,-50%); transition:opacity .6s ease; }
+  .panel.show{ opacity:1; }
+  .panel > span{ font-size: clamp(26px, 5vw, 54px); text-align:center; padding:14px 18px; }
+
+  /* Эффекты тряски */
+  .corridor.shake{ animation:camshake .08s linear infinite; }
+  @keyframes camshake{ 0%{ transform:translate(1px, -1px) } 25%{ transform:translate(-1px, 1px)} 50%{ transform:translate(1px, 0)} 75%{ transform:translate(-1px,-1px)} 100%{ transform:translate(0,0)} }
+  .shake-strong{ animation:bigshake .06s linear infinite; }
+  @keyframes bigshake{ 0%{ transform:translate(4px, -4px) rotate(-.2deg) } 25%{ transform:translate(-5px, 3px) rotate(.25deg)} 50%{ transform:translate(5px, -3px) rotate(.2deg)} 75%{ transform:translate(-4px,4px) rotate(-.25deg)} 100%{ transform:translate(0,0) rotate(0)} }
+
+  /* Финальный экран */
+  #final{ position:fixed; inset:0; display:grid; place-items:center; gap:24px; background:rgba(0,0,0,.92); color:#fff; z-index:50; opacity:0; pointer-events:none; transition:opacity .6s ease; }
+  #final.show{ opacity:1; pointer-events:auto }
+  #final h1{ font-size:clamp(48px,12vw,140px); letter-spacing:2px; }
+  .final-btn{ padding:18px 26px; font-size:clamp(18px,3vw,28px); letter-spacing:1px; background:#b30000; color:#fff; border:none; border-radius:12px; cursor:pointer; box-shadow:0 12px 28px #000a, inset 0 -2px 0 #0006; }
+  .final-btn:active{ transform:translateY(1px) }
+  .heart-btn{
+    position:absolute; bottom:40px; right:40px;
+    padding:14px 18px; font-size:20px; background:#e91e63; color:#fff; border:none; border-radius:999px; cursor:pointer; box-shadow:0 10px 24px #0009
+  }
+
+  #fx{ position:fixed; inset:0; z-index:49; pointer-events:none }
+
+  /* ===== ПЕЧАЛЬ ===== */
+  body.rain-mode{ background:#05070a; }
+  #rainCanvas{ position:fixed; inset:0; z-index:2; display:none; background:linear-gradient(#05070a,#0a0d12); }
+  #rainCanvas.show{ display:block; }
+  #sadCaption{
+    position:fixed; inset:auto 0 6vh 0; text-align:center; z-index:3; display:none;
+    color:#cfd8dc; font-size:18px; letter-spacing:.5px; opacity:.85;
+  }
+  #sadCaption.show{ display:block; }
+  #lightning{
+    position:fixed; inset:0; z-index:4; pointer-events:none;
+    opacity:0; background:radial-gradient(ellipse at var(--cx,50%) var(--cy,40%), rgba(255,255,255,0.95), rgba(255,255,255,0.2) 25%, rgba(255,255,255,0) 60%);
+    transition:opacity .06s ease; mix-blend-mode:screen;
+  }
+
+  /* ===== ХЭППИ ЭКРАН ===== */
+  #happy{
+    position:fixed; inset:0; display:none; place-items:center; z-index:6; background:#000;
+    color:#fff; text-align:center; padding:24px;
+  }
+  #happy.show{ display:grid; }
+  #happy h2{ font-size:clamp(28px,6vw,64px); letter-spacing:1px; margin:0 0 18px }
+  #happy img{ width:min(420px, 80vw); height:auto; border-radius:16px; box-shadow:0 20px 60px #000a }
+</style>
+</head>
+<body>
+  <canvas id="fx"></canvas>
+  <div id="fallLayer" aria-hidden="true"></div>
+  <div id="blockOverlay"><h2>НУ И ПОЖАЛУЙСТА НУ И ЛАДНО.</h2></div>
+
+  <!-- СТАРТ -->
+  <section id="startScreen">
+    <div id="startInner">
+      <div id="progressWrap">
+        <div id="progressLabel">Заполни шкалу 40 нажатий</div>
+        <div id="progress"><div id="progressFill"></div><div id="progressCount">0 / 40</div></div>
+      </div>
+      <div class="door-btn" id="startDoor">
+        <div class="door-frame">
+          <div class="door">
+            <div class="hinge top"></div>
+            <div class="hinge mid"></div>
+            <div class="hinge bottom"></div>
+            <div class="handle"></div>
+          </div>
+          <div class="glow"></div>
+        </div>
+        <div class="door-text">ОТКРЫТЬ</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- КОРИДОР -->
+  <div class="corridor" id="corridor">
+    <div class="scene" id="scene">
+      <div class="wall left grid"></div>
+      <div class="wall right grid"></div>
+      <div class="floor"></div>
+      <div class="ceiling"></div>
+      <div class="panel" id="p1" style="transform:translate(-50%,-50%) translateZ(-700px)"><span>Здесь должна была бы быть</span></div>
+      <div class="panel" id="p2" style="transform:translate(-50%,-50%) translateZ(-1600px)"><span>какая-то умная речь</span></div>
+      <div class="panel" id="p3" style="transform:translate(-50%,-50%) translateZ(-2500px)"><span>и пожелания.</span></div>
+      <div class="panel" id="p4" style="transform:translate(-50%,-50%) translateZ(-3400px)"><span>Но, к сожалению, я не писатель,</span></div>
+      <div class="panel" id="p5" style="transform:translate(-50%,-50%) translateZ(-4300px)"><span>да и всё уже было сказано за меня.</span></div>
+      <div class="panel" id="p6" style="transform:translate(-50%,-50%) translateZ(-5200px)"><span>Так что… типо:</span></div>
+    </div>
+  </div>
+
+  <!-- ФИНАЛ -->
+  <div id="final">
+    <h1>С ДНЁМ РОЖДЕНИЯ! 🎉</h1>
+    <button class="final-btn" id="rageBtn">ПОСЛАТЬ НАХУЙ СЕЙЧАС</button>
+    <button class="heart-btn" id="heartBtn">❤</button>
+  </div>
+
+  <!-- ПЕЧАЛЬ -->
+  <canvas id="rainCanvas"></canvas>
+  <div id="sadCaption">идёт дождь… играет грустая музыка</div>
+  <div id="lightning"></div>
+
+  <!-- HAPPY -->
+  <section id="happy">
+    <div>
+      <h2 id="happyTitle"></h2>
+      <img id="danceGif" src="" alt="танцующий котёнок">
+    </div>
+  </section>
+
+<script>
+/* ================== КОНФИГ ================== */
+// === автогенерация имён: photo_1_2025-10-27_00-24-40.jpg ... photo_99_2025-10-27_00-24-40.jpg
+const IMG_DIR = 'img';
+const DATE_TOKEN = '2025-10-27_00-24-40';
+const IMG_PREFIX = 'photo_';
+const EXT = 'jpg';
+const MAX_IMAGES = 99;
+
+const IMG_POOL = Array.from(
+  { length: MAX_IMAGES },
+  (_, i) => `${IMG_DIR}/${IMG_PREFIX}${i+1}_${DATE_TOKEN}.${EXT}`
+);
+
+const IMAGE_SIZE_MIN = 300, IMAGE_SIZE_MAX = 400;
+const DANCE_GIF = 'gif/dance.gif'; // укажи путь к своей гифке
+
+/* ================== ОСНОВНОЕ ================== */
+const startInner=document.getElementById('startInner');
+const fallLayer=document.getElementById('fallLayer');
+const progressWrap=document.getElementById('progressWrap');
+const progressFill=document.getElementById('progressFill');
+const progressCount=document.getElementById('progressCount');
+const blockOverlay=document.getElementById('blockOverlay');
+const GOAL=40; let presses=0; let activeButtons=0; const MAX_BTNS=24;
+
+function spawnChaosButtons(n=18){
+  const areaW=window.innerWidth, areaH=window.innerHeight;
+  const pr = progressWrap.getBoundingClientRect();
+  const safeTop = Math.max(60, pr.bottom + 12), safeBottom = 10, safeLeft = 10, safeRight = 10;
+  const created=Math.min(n, MAX_BTNS-activeButtons);
+  for(let i=0;i<created;i++){
+    const b=document.createElement('button');
+    b.className='trollBtn';
+    b.textContent='ПОСЛАТЬ НАХУЙ СРАЗУ';
+    sendDiscordWithIP('ПОСЛАТЬ НАХУЙ СРАЗУ');
+    const w=320+Math.random()*80, h=44+Math.random()*10;
+    const x = safeLeft + Math.random()*(areaW - w - safeLeft - safeRight);
+    const y = safeTop  + Math.random()*(areaH - h - safeTop - safeBottom);
+    b.style.width=w+'px'; b.style.height=h+'px';
+    b.style.left=x+'px'; b.style.top=y+'px';
+    b.style.setProperty('--rot', (Math.random()*5-4)+'deg');
+    b.addEventListener('click', () => {
+  onTrollClick(b, x + w/2, y);
+});
+
+    startInner.appendChild(b); activeButtons++;
+  }
+}
+function onTrollClick(btn, cx, cy){
+  dropImage(cx, cy);
+  btn.remove(); activeButtons--; presses=Math.min(GOAL, presses+1);
+  const pct=Math.round(presses/GOAL*100);
+  progressFill.style.width=pct+'%'; progressCount.textContent=`${presses} / ${GOAL}`;
+  spawnChaosButtons(1);
+  if(presses>=GOAL){ blockOverlay.classList.add('show'); }
+}
+function randFrom(arr){ return arr[(Math.random()*arr.length)|0]; }
+function dropImage(x,y){
+  if(!IMG_POOL.length) return;
+  const url = IMG_POOL[(Math.random()*IMG_POOL.length)|0];
+  const img = new Image();
+  const size = IMAGE_SIZE_MIN + Math.random()*(IMAGE_SIZE_MAX - IMAGE_SIZE_MIN);
+
+  img.onload = () => {
+    img.className = 'faller-img';
+    img.style.width = size+'px';
+    img.style.height = size+'px';
+    img.style.left = (x - size/2) + 'px';
+
+    // <<< тут ограничиваем наклон картинок до ±45°
+    const MAX_TILT = 45; // градусов
+    const tilt = (Math.random()*2*MAX_TILT - MAX_TILT); // от -45 до +45
+    img.style.setProperty('--spin', tilt + 'deg');
+
+    img.style.setProperty('--fallDur', (4+Math.random()*2)+'s');
+    fallLayer.appendChild(img);
+    setTimeout(()=> img.remove(), 8000);
+  };
+
+  img.onerror = () => {};
+  img.src = url;
+}
+
+addEventListener('load',()=>{ spawnChaosButtons(22); });
+
+/* Дверь / Коридор */
+const door=document.getElementById('startDoor');
+const doorLeaf=door.querySelector('.door');
+const startScreen=document.getElementById('startScreen');
+const corridor=document.getElementById('corridor');
+const scene=document.getElementById('scene');
+const panels=[p1,p2,p3,p4,p5,p6];
+
+door.addEventListener('click', async () => {
+  // 💬 Отправляем уведомление в Discord
+  sendDiscordWithIP('НАЧАТЬ');
+
+  // 🚪 Открываем дверь и запускаем анимацию
+  doorLeaf.style.transform='rotateY(-95deg)';
+  setTimeout(()=>{
+    startScreen.style.display='none';
+    corridor.classList.add('show','shake');
+    scene.style.transform='translateZ(0px)';
+    startFlight();
+  },500);
+});
+
+function startFlight(){
+  const DEPTH = 5200, DURATION = 16000;
+  const PANEL_Z = [700,1600,2500,3400,4300,5200];
+  const SHOW_BEFORE = 320, HIDE_AFTER = 260;
+  let start=null; let doneFinal=false;
+  function frame(ts){
+    if(!start) start=ts;
+    const t = Math.min(1,(ts-start)/DURATION);
+    const z = t*DEPTH; scene.style.transform = `translateZ(${z}px)`;
+    let active=-1; for(let i=0;i<PANEL_Z.length;i++){ if(z>=PANEL_Z[i]-SHOW_BEFORE && z<=PANEL_Z[i]+HIDE_AFTER){ active=i; break; } }
+    panels.forEach((p,i)=> p.classList.toggle('show', i===active));
+    if(t<1){ requestAnimationFrame(frame); } else if(!doneFinal){ doneFinal=true; finale(); }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* Финал */
+const rageBtn=document.getElementById('rageBtn');
+const heartBtn=document.getElementById('heartBtn');
+const finalEl=document.getElementById('final');
+
+function finale(){
+  corridor.classList.remove('shake');
+  document.body.classList.add('shake-strong');
+  for(let i=0;i<6;i++) setTimeout(()=> burst(innerWidth/2, innerHeight/2, 260, 18+i*1.2), i*160);
+  setTimeout(()=>{ document.body.classList.remove('shake-strong'); finalEl.classList.add('show'); },1400);
+}
+
+/* УБЕГАЮЩЕЕ СЕРДЦЕ + КЛИК-ТРИГГЕР */
+let hb={x:null,y:null,inited:false};
+function initHeartPosition(){
+  if(hb.inited) return;
+  const br=heartBtn.getBoundingClientRect(), fr=finalEl.getBoundingClientRect();
+  hb.x=br.left-fr.left; hb.y=br.top-fr.top;
+  heartBtn.style.position='absolute'; heartBtn.style.right='auto'; heartBtn.style.bottom='auto';
+  heartBtn.style.left=hb.x+'px'; heartBtn.style.top=hb.y+'px';
+  hb.inited=true;
+}
+finalEl.addEventListener('mouseenter', initHeartPosition, {once:true});
+finalEl.addEventListener('mousemove',(e)=>{
+  if(!hb.inited) initHeartPosition();
+  const fr=finalEl.getBoundingClientRect(), br=heartBtn.getBoundingClientRect();
+  const mx=e.clientX-fr.left, my=e.clientY-fr.top;
+  const cx=hb.x+br.width/2, cy=hb.y+br.height/2;
+  const dx=mx-cx, dy=my-cy, dist=Math.hypot(dx,dy), R=160;
+  if(dist<R){
+    const ux=dx/(dist||1), uy=dy/(dist||1), push=(R-dist)+8;
+    hb.x-=ux*push; hb.y-=uy*push;
+    const pad=10;
+    hb.x=Math.max(pad, Math.min(fr.width-br.width-pad, hb.x));
+    hb.y=Math.max(pad, Math.min(fr.height-br.height-pad, hb.y));
+    heartBtn.style.left=hb.x+'px'; heartBtn.style.top=hb.y+'px';
+  }
+});
+// клик по сердечку → мгновенно всё чистим и пишем сообщение
+heartBtn.addEventListener('click', ()=>{
+  cleanupAll();
+  sendDiscordWithIP('❤ HEART');
+  showHappyScreen('ТЫ ОПЯТЬ СДЕЛАЛА НЕВОЗМОЖНОЕ', DANCE_GIF); // можно и без гифки, но прикольно оставить
+});
+
+/* Частицы */
+const fx=document.getElementById('fx');
+const ctx=fx.getContext('2d',{alpha:true});
+let FX_ON=true;
+let W=0,H=0,DPR=Math.min(2,window.devicePixelRatio||1);
+function resize(){W=fx.width=innerWidth*DPR;H=fx.height=innerHeight*DPR;fx.style.width=innerWidth+'px';fx.style.height=innerHeight+'px';}
+addEventListener('resize',resize);resize();
+const parts=[];const G=.18*DPR,F=.992;const COLORS=['#ff3b3b','#ff6a00','#ffb000','#ffee99','#ffffff'];
+function burst(x,y,n=260,power=16){
+  for(let i=0;i<n;i++){
+    const a=Math.PI*2*Math.random();const v=power*(.6+Math.random()*.6)*DPR;
+    parts.push({x:x*DPR,y:y*DPR,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:80+Math.random()*60,r:1+Math.random()*2.2,c:COLORS[(Math.random()*COLORS.length)|0]});
+  }
+}
+function step(){
+  if(!FX_ON) return;
+  ctx.clearRect(0,0,W,H);
+  for(let i=parts.length-1;i>=0;i--){
+    const p=parts[i];
+    p.vx*=F; p.vy=p.vy*F+G; p.x+=p.vx; p.y+=p.vy; p.life--;
+    if(p.life<=0){ parts.splice(i,1); continue; }
+    ctx.globalAlpha=Math.max(0,Math.min(1,p.life/120));
+    ctx.fillStyle=p.c; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+  }
+  requestAnimationFrame(step);
+}
+step();
+
+/* ===== ПЕЧАЛЬ: дождь, музыка, молнии, таймер 20с ===== */
+const rainCanvas = document.getElementById('rainCanvas');
+const sadCaption = document.getElementById('sadCaption');
+const lightningEl = document.getElementById('lightning');
+const happyEl = document.getElementById('happy');
+const happyTitle = document.getElementById('happyTitle');
+const danceGif = document.getElementById('danceGif');
+
+let sadTimer=null, lightningTimer=null;
+
+rageBtn?.addEventListener('click', ()=>{ startSadMode(); });
+
+function startSadMode(){
+  FX_ON=false;
+  document.querySelectorAll('#startScreen,#corridor,#final,#blockOverlay').forEach(el=> el.remove());
+  // fallLayer можно оставить/удалить — убираем:
+  fallLayer.remove();
+  fx.style.display='none';
+
+  document.body.classList.add('rain-mode');
+  rainCanvas.classList.add('show'); sadCaption.classList.add('show');
+
+  startRain();
+  startSadMusic();
+  startLightning();
+
+  // через 20 секунд — happy-поворот
+  sadTimer = setTimeout(()=> {
+    endSadModeAndCelebrate();
+  }, 20000);
+}
+
+/* дождь */
+function startRain(){
+  const c = rainCanvas, rctx = c.getContext('2d');
+  let R_W, R_H, R_DPR=Math.min(2, window.devicePixelRatio||1);
+  function rResize(){ R_W=c.width=innerWidth*R_DPR; R_H=c.height=innerHeight*R_DPR; c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px';}
+  addEventListener('resize', rResize); rResize();
+
+  const drops=[], splashes=[];
+  function spawnDrop(){
+    const speed = 10 + Math.random()*8;
+    drops.push({ x: Math.random()*R_W, y: -20*Math.random()*R_DPR, vy: speed*R_DPR, len: (10+Math.random()*20)*R_DPR, thick: (1+Math.random()*1.2)*R_DPR });
+  }
+  for(let i=0;i<240;i++) spawnDrop();
+
+  (function loop(){
+    if(!document.body.classList.contains('rain-mode')) return;
+    rctx.fillStyle='rgba(5,7,10,0.45)'; rctx.fillRect(0,0,R_W,R_H);
+    rctx.strokeStyle='rgba(200,220,255,0.75)'; rctx.lineCap='round';
+    for(let i=drops.length-1;i>=0;i--){
+      const d=drops[i];
+      rctx.lineWidth=d.thick; rctx.beginPath(); rctx.moveTo(d.x, d.y); rctx.lineTo(d.x, d.y + d.len); rctx.stroke();
+      d.y += d.vy;
+      if(d.y > R_H - 20*R_DPR){
+        for(let k=0;k<3;k++) splashes.push({ x:d.x+(Math.random()*6-3)*R_DPR, y:R_H-18*R_DPR, vx:(Math.random()*2-1)*2*R_DPR, vy:-(2+Math.random()*2)*R_DPR, life:28+Math.random()*12 });
+        drops.splice(i,1); spawnDrop();
+      }
+    }
+    rctx.fillStyle='rgba(200,220,255,0.7)';
+    for(let i=splashes.length-1;i>=0;i--){
+      const s=splashes[i]; s.x+=s.vx; s.y+=s.vy; s.vy+=0.18*R_DPR; s.life--;
+      rctx.globalAlpha=Math.max(0,Math.min(1,s.life/30));
+      rctx.beginPath(); rctx.arc(s.x, s.y, 1.2*R_DPR, 0, Math.PI*2); rctx.fill(); rctx.globalAlpha=1;
+      if(s.life<=0 || s.y>R_H) splashes.splice(i,1);
+    }
+    requestAnimationFrame(loop);
+  })();
+}
+
+/* музыка */
+let audioCtx;
+function startSadMusic(){
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // === путь к твоей музыке ===
+  const MUSIC_URL = "music/main.mp3"; // ← укажи свой путь
+
+  // создаём <audio> и включаем его через WebAudio для контроля громкости
+  const audioEl = new Audio(MUSIC_URL);
+  audioEl.loop = true;
+  const track = audioCtx.createMediaElementSource(audioEl);
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0; // начнём с нуля (fade-in)
+  track.connect(gain).connect(audioCtx.destination);
+
+  // воспроизводим и плавно поднимаем громкость
+  audioEl.play().then(()=>{
+    const start = audioCtx.currentTime;
+    gain.gain.linearRampToValueAtTime(0.8, start + 2); // за 2 секунды до 80%
+  }).catch(err=>console.warn("Ошибка при проигрывании:", err));
+
+  window.__audio = { ctx: audioCtx, el: audioEl, gain };
+}
+
+function stopSadMusic(){
+  try {
+    // останавливаем WebAudio
+    if (window.__audio?.ctx) {
+      const { ctx, master } = window.__audio;
+      const t = ctx.currentTime;
+      if (master?.gain) {
+        master.gain.cancelScheduledValues(t);
+        master.gain.linearRampToValueAtTime(0, t + 1.5);
+      }
+    }
+
+    // останавливаем mp3-файл, если он есть
+    if (window.__audio?.el) {
+      const el = window.__audio.el;
+      const fadeOut = setInterval(() => {
+        if (el.volume > 0.05) el.volume -= 0.05;
+        else {
+          el.pause();
+          el.currentTime = 0;
+          clearInterval(fadeOut);
+        }
+      }, 100);
+    }
+  } catch(e) {
+    console.warn('Не удалось выключить музыку:', e);
+  }
+}
+
+/* молнии + гром */
+function startLightning(){
+  const el = lightningEl;
+  function flashOnce(){
+    if(!window.__audio){ setTimeout(flashOnce, 400); return; }
+    const { ctx } = window.__audio;
+    const cx = Math.random()*100, cy = 10 + Math.random()*60;
+    el.style.setProperty('--cx', cx+'%'); el.style.setProperty('--cy', cy+'%');
+    const bursts = 1 + (Math.random()*3|0); let delay = 0;
+    for(let i=0;i<bursts;i++){ setTimeout(()=>{ el.style.opacity=1; setTimeout(()=> el.style.opacity=0, 60 + (Math.random()*40|0)); }, delay); delay += 90 + Math.random()*110; }
+    const distNorm = Math.hypot((cx-50)/50, (cy-40)/60);
+    const thunderDelay = 300 + distNorm*900;
+    setTimeout(()=> playThunder(window.__audio.ctx, 0.35 + Math.random()*0.15), thunderDelay);
+  }
+  (function scheduleNext(){
+    flashOnce();
+    const next = 2500 + Math.random()*4500;
+    lightningTimer = setTimeout(scheduleNext, next);
+  })();
+}
+function playThunder(ctx, volume=0.4){
+  const out = ctx.createGain(); out.gain.value = volume * 0.6;
+  const noise = ctx.createBufferSource();
+  const buf = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for(let i=0;i<d.length;i++){ const w = Math.random()*2-1; d[i] = (i? (d[i-1]*0.985 + w*0.015) : w); }
+  noise.buffer = buf; noise.loop = false;
+  const hp = ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=40;
+  const lp = ctx.createBiquadFilter(); lp.type='lowpass';  lp.frequency.value=800;
+  const boom = ctx.createOscillator(); boom.type='sine'; boom.frequency.value=48;
+  const boomGain = ctx.createGain(); boomGain.gain.value=0;
+  const env = ctx.createGain(); env.gain.value=0;
+
+  noise.connect(hp); hp.connect(lp); lp.connect(env);
+  boom.connect(boomGain).connect(env);
+
+  // в master, если есть
+  if(window.__audio?.master){ env.connect(window.__audio.master); }
+  else { env.connect(ctx.destination); }
+
+  const now = ctx.currentTime;
+  env.gain.setValueAtTime(0.0, now);
+  env.gain.linearRampToValueAtTime(volume, now + 0.05);
+  env.gain.exponentialRampToValueAtTime(0.08, now + 1.2);
+  env.gain.exponentialRampToValueAtTime(0.001, now + 3.2);
+
+  boomGain.gain.setValueAtTime(0, now);
+  boomGain.gain.linearRampToValueAtTime(volume*0.5, now + 0.04);
+  boomGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+  noise.start(now); boom.start(now);
+  noise.stop(now + 3.3); boom.stop(now + 0.7);
+}
+
+/* ===== Переход из печали в счастье через 20с ===== */
+function endSadModeAndCelebrate(){
+  stopSadMusic(); // <--- добавь сюда первым делом
+
+  // гасим аудио плавно
+  if(window.__audio?.master){
+    const { ctx, master } = window.__audio;
+    const t = ctx.currentTime;
+    master.gain.cancelScheduledValues(t);
+    master.gain.setValueAtTime(master.gain.value, t);
+    master.gain.linearRampToValueAtTime(0.0, t + 1.5);
+    setTimeout(()=> ctx.suspend(), 1800);
+  }
+
+  // выключаем дождь, молнии и т.д.
+  if(lightningTimer) clearTimeout(lightningTimer);
+  document.body.classList.remove('rain-mode');
+  rainCanvas.classList.remove('show');
+  sadCaption.classList.remove('show');
+  lightningEl.style.opacity = 0;
+
+  // happy экран
+  showHappyScreen('ХОТЯ СТОП, СЕГОДНЯ ЖЕ НЕ ДЕНЬ ГРУСТИ', DANCE_GIF);
+}
+
+
+/* ===== Утилиты: очистки и показ happy ===== */
+function cleanupAll(){
+  if(sadTimer) clearTimeout(sadTimer);
+  if(lightningTimer) clearTimeout(lightningTimer);
+  try{ window.__audio?.ctx?.close(); }catch(e){}
+  document.querySelectorAll('body > *').forEach(el=> el.remove());
+  // создадим пустой контейнер для happy, если удалили:
+  const d=document.createElement('div'); d.id='rootEmpty'; document.body.appendChild(d);
+}
+function showHappyScreen(title, gifPath){
+  happyTitle.textContent = title || '';
+  danceGif.src = gifPath || DANCE_GIF;
+  happyEl.classList.add('show');
+}
+// ======== ФИНАЛЬНОЕ СОБЫТИЕ: КЛИК ПО СЕРДЦУ ========
+heartBtn?.addEventListener('click', () => {
+  // убираем всё визуальное
+  document.querySelectorAll('#rainCanvas, #sadCaption, #fallLayer, #final, #corridor, #startScreen')
+    .forEach(el => el && el.remove());
+  
+  // останавливаем звуки
+  try { audioCtx?.close(); } catch(e) {}
+  
+  // создаём чёрный экран с текстом
+  const endScreen = document.createElement('div');
+  endScreen.style.position = 'fixed';
+  endScreen.style.inset = '0';
+  endScreen.style.display = 'grid';
+  endScreen.style.placeItems = 'center';
+  endScreen.style.background = 'black';
+  endScreen.style.color = '#fff';
+  endScreen.style.fontFamily = "'Bebas Neue', sans-serif";
+  endScreen.style.fontSize = 'clamp(28px, 6vw, 72px)';
+  endScreen.style.letterSpacing = '1px';
+  endScreen.style.zIndex = '999999';
+  endScreen.textContent = 'ТЫ ОПЯТЬ СДЕЛАЛА НЕВОЗМОЖНОЕ';
+  
+  document.body.appendChild(endScreen);
+});
+
+const DISCORD_WEBHOOK_URL = "";
+
+async function getPublicIP() {
+  try {
+    // ipify поддерживает CORS и даёт { "ip": "1.2.3.4" }
+    const r = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
+    if (!r.ok) return "unknown";
+    const j = await r.json();
+    return j.ip || "unknown";
+  } catch (e) {
+    console.warn("Не удалось получить IP:", e);
+    return "unknown";
+  }
+}
+
+/**
+ * Отправляет сообщение в Discord webhook, включая публичный IP (определённый через ipify)
+ * eventName — строка, какая кнопка нажата
+ */
+async function sendDiscordWithIP(eventName) {
+  try {
+    // 1) получаем публичный IP клиента
+    const ip = await getPublicIP();
+
+    // 2) составляем тело
+    const payload = {
+      content: null,
+      embeds: [{
+        title: "🖱️ Нажата кнопка",
+        color: 0xff6b6b,
+        fields: [
+          { name: "Кнопка", value: String(eventName || "unknown"), inline: true },
+          { name: "IP",     value: `\`${ip}\``, inline: true },
+          { name: "Страница", value: String(location.href || "unknown"), inline: false },
+          { name: "Время", value: new Date().toLocaleString(), inline: false }
+        ]
+      }]
+    };
+
+    // 3) отправляем в Discord
+    const resp = await fetch(DISCORD_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      // Обычно в браузере упадёт CORS до этого места; но если ответ 4xx/5xx — логируем
+      const text = await resp.text().catch(()=>"(no body)");
+      console.warn("Webhook returned", resp.status, text);
+    }
+  } catch (err) {
+    console.warn("Ошибка при отправке webhook:", err);
+  }
+}
+
+
+</script>
+</body>
+</html>
